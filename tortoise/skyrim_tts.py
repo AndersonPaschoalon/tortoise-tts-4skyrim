@@ -1,40 +1,30 @@
-"""
-Fluxo do zero:
-importar dialogos
-? realizar customizações no arquivo de import
-criar batch
-realizar leitura linha a linha do arquivo de batch, e gear audio com parametros customizados
-    - o cache to tortoisetts seve ser gerado no diretorio cache
-    - baseando-se na emoção os parâmetrso devem ser escolhidos
-    - estudar se é possivel salvar estado
-
-Ao executar o tortoise
-    - verificar se existe algum estado de modelo salvo
-        - se sim, finalizar
-        - continuar batch em andamento se existir
-    - verificar se existe um batch em andamento
-        - continuar batch
-    - se nada estiver em andamento, seguir fluxo inicial
-"""
-
 import os
 import argparse
+import torch
+import torchaudio
+from pathlib import Path
+import traceback
 import sys
 
+from api import TextToSpeech, MODELS_DIR
+from utils.audio import load_voices
 from skyrim_utils.BatchBuilder import BatchBuilder
-from skyrim_utils.BatchBuilder import STATE_COMPLETED_TRUE
 from skyrim_utils.BatchBuilder import STATE_COMPLETED_FALSE
+from skyrim_utils.BatchBuilder import STATE_COMPLETED_TRUE
 from skyrim_utils.BatchBuilder import STATE_COMPLETED_ONGOING
 from skyrim_utils.BatchBuilder import STATE_COMPLETED_ERROR
+from skyrim_utils.Settings import TortoiseApiSettings, ModelPresets
 
 
 VERSION = "1.0.0"
 RET_ERROR = 1
 RET_SUCCESS = 0
+SETTINGS = {
+    "use_deepspeed": True,
+    "kv_cache": True,
+    "half": True,
 
-
-import argparse
-
+}
 
 def main():
     parser = argparse.ArgumentParser(description='tortoise4skyrim: A tool for generating Skyrim character dialogues using Tortoise TTS.')
@@ -91,8 +81,7 @@ def batch_generate():
             print("Error: dialogs must be imported from CreationKit before creation batch. Use --help option for help.")
             return RET_ERROR
         else:
-            # todo Solid here
-            import_file = os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.IMPORT_FILE)
+            import_file = BatchBuilder.get_import_file_path()
             print("Creating batch file...")
             BatchBuilder.create_tts_batch(import_file)
     else:
@@ -110,7 +99,7 @@ def batch_generate():
                BatchBuilder.archive_batch()
             else:
                 # solid here
-                batchfile = os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.BATCH_FILE)
+                batchfile = BatchBuilder.get_batch_file_path()
                 print(f"Use --archive-batch option to archive the active batch, or rename/edit the file {batchfile} manually to proceed.")
             return RET_SUCCESS
 
@@ -119,16 +108,83 @@ def batch_generate():
         BatchBuilder.update_batch_line(entry["id"], state)
 
 
+def remove_filename_from_path(file_path):
+    path = Path(file_path)
+    directory = path.parent
+    return str(directory) + os.sep
+
+
 def tortoise_do_tts(entry):
-    print("TODO")
-    # utilizar a API do tortoise aqui!!
-    return STATE_COMPLETED_ERROR
+    try:
+        print(f"Starting Speach Synthesis [{entry['id']}]: {entry['quest']}")
+        print(f"entry: {entry}")
+
+        model_dir = "" # TODO
+        api = TortoiseApiSettings.default()
+        preset = ModelPresets.get_preset(entry['emotion'])
+        candidates = api['default_candidates']
+
+        output_dir = remove_filename_from_path(entry["output_path"])
+        output_file_name, _ = os.path.splitext(os.path.basename(entry["output_path"]))
+        print(f"Creating output path {output_dir}...")
+        os.makedirs(output_dir, exist_ok=True)
+
+        tts = TextToSpeech(models_dir=model_dir, use_deepspeed=api['use_deepspeed'], kv_cache=api['kv_cache'],
+                           half=api['half'])
+
+        voice_samples, conditioning_latents = load_voices(entry['voice'])
+
+        gen, dbg_state = tts.tts_with_preset(entry['text'], k=candidates, voice_samples=voice_samples,
+                                             conditioning_latents=conditioning_latents,
+                                             preset=api['preset'], use_deterministic_seed=api['seed'],
+                                             return_deterministic_state=True, cvvp_amount=api['cvvp_amount'],
+                                             temperature=preset['temperature'], length_penalty=preset['length_penalty'],
+                                             repetition_penalty=preset['repetition_penalty'], top_p=preset['top_p'],
+                                             cond_free_k=preset['cond_free_k'],
+                                             diffusion_temperature=preset['diffusion_temperature'])
+        if isinstance(gen, list):
+            for j, g in enumerate(gen):
+                pre_ext = "" if j == 0 else f"_{j}"
+                torchaudio.save(os.path.join(output_dir, f'{output_file_name}{pre_ext}.wav'), g.squeeze(0).cpu(), 24000)
+        else:
+            torchaudio.save(os.path.join(output_dir, f'{output_file_name}.wav'), gen.squeeze(0).cpu(), 24000)
+
+        return STATE_COMPLETED_TRUE
+
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        return STATE_COMPLETED_ERROR
 
 
 if __name__ == '__main__':
     main()
 
 
+"""
+Fluxo do zero:
+importar dialogos
+? realizar customizações no arquivo de import
+criar batch
+realizar leitura linha a linha do arquivo de batch, e gear audio com parametros customizados
+    - o cache to tortoisetts seve ser gerado no diretorio cache
+    - baseando-se na emoção os parâmetrso devem ser escolhidos
+    - estudar se é possivel salvar estado
+
+Ao executar o tortoise
+    - verificar se existe algum estado de modelo salvo
+        - se sim, finalizar
+        - continuar batch em andamento se existir
+    - verificar se existe um batch em andamento
+        - continuar batch
+    - se nada estiver em andamento, seguir fluxo inicial
+# TODO: Criar logs para cada execução
+# TODO: model dir
+# TODO: validar presets
+# TODO: fine-tune
+# TODO: separar pastas com audio sample do skyrim
+# TODO: tutorial, explicando que é possivel add emoções novas
+"""
 
 
 

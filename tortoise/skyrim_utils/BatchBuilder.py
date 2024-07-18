@@ -17,6 +17,7 @@ STATE_COMPLETED_ONGOING = "ongoing"
 # error, and cannot be executed
 STATE_COMPLETED_ERROR = "error"
 
+
 class BatchBuilder:
     """
     The purpose if this class is to import from Skyrim root directory all dialogs exported by Creation Kit as
@@ -71,9 +72,17 @@ class BatchBuilder:
     CSV_SEP = ";"
 
     @staticmethod
+    def get_batch_file_path():
+        return os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.BATCH_FILE)
+
+    @staticmethod
+    def get_import_file_path():
+        return os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.IMPORT_FILE)
+
+    @staticmethod
     def import_dialogs(skyrim_root):
         BatchBuilder._initialize()
-        import_file = os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.IMPORT_FILE)
+        import_file = BatchBuilder.get_import_file_path()
         df = BatchBuilder._import_all_dialogues(skyrim_root)
         df.to_csv(import_file, sep=BatchBuilder.CSV_SEP, index=False)
         return import_file
@@ -89,15 +98,15 @@ class BatchBuilder:
 
     @staticmethod
     def is_batch_active():
-        return os.path.exists(os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.BATCH_FILE))
+        return os.path.exists(BatchBuilder.get_batch_file_path())
 
     @staticmethod
     def is_import_active():
-        return os.path.exists(os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.IMPORT_FILE))
+        return os.path.exists(BatchBuilder.get_import_file_path())
 
     @staticmethod
     def archive_batch():
-        batchfile = os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.BATCH_FILE)
+        batchfile = BatchBuilder.get_batch_file_path()
         if os.path.exists(batchfile):
             confirmation = input("Are you sure you want to archive the active batch? (Y/N): ").strip().upper()
             if confirmation != 'Y':
@@ -115,8 +124,8 @@ class BatchBuilder:
 
     @staticmethod
     def archive_import():
-        batchfile = os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.IMPORT_FILE)
-        if os.path.exists(batchfile):
+        importfile = BatchBuilder.get_import_file_path()
+        if os.path.exists(importfile):
             confirmation = input("Are you sure you want to archive the active import? (Y/N): ").strip().upper()
             if confirmation != 'Y':
                 print("Operation canceled.")
@@ -124,8 +133,8 @@ class BatchBuilder:
             now = datetime.now()
             timestamp = now.strftime("%Y-%m-%d-%H-%M-%S")
             new_filename = os.path.join(BatchBuilder.CACHE_DIR, f"{BatchBuilder.IMPORT_FILE}-{timestamp}.csv")
-            os.rename(batchfile, new_filename)
-            print(f"Renamed '{batchfile}' to '{new_filename}'")
+            os.rename(importfile, new_filename)
+            print(f"Renamed '{importfile}' to '{new_filename}'")
             print(f"To restore batch, rename {new_filename} to {BatchBuilder.IMPORT_FILE} manually.")
         else:
             print("No valid imports to archive.")
@@ -139,11 +148,11 @@ class BatchBuilder:
         Returns None if no line with the provided state exists.
         """
         if list_completed_states_to_select is None:
-            list_completed_states_to_select = [STATE_COMPLETED_FALSE]
+            list_completed_states_to_select = [STATE_COMPLETED_FALSE, STATE_COMPLETED_ONGOING]
 
         list_completed_states_to_select = [state.lower() for state in list_completed_states_to_select]
 
-        batch_file_path = os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.BATCH_FILE)
+        batch_file_path = BatchBuilder.get_batch_file_path()
 
         try:
             df = pd.read_csv(batch_file_path, sep=';', dtype=str)
@@ -164,7 +173,7 @@ class BatchBuilder:
         """
         Update line id to new_completed_state (lower case)
         """
-        batch_file_path = os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.BATCH_FILE)
+        batch_file_path = BatchBuilder.get_batch_file_path()
 
         try:
             df = pd.read_csv(batch_file_path, sep=';', dtype=str)
@@ -309,7 +318,7 @@ class BatchBuilder:
             batch_data.append(batch_line)
 
         # Create batch.csv with headers
-        batch_file_path = os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.BATCH_FILE)
+        batch_file_path = BatchBuilder.get_batch_file_path()
         with open(batch_file_path, 'w') as batch_file:
             batch_file.write("# " + BatchBuilder.CSV_SEP.join(BatchBuilder.BATCH_HEADER) + "\n")
             for line in batch_data:
