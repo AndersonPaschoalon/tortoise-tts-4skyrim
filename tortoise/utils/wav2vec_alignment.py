@@ -49,10 +49,10 @@ class Wav2VecAlignment:
     """
     Uses wav2vec2 to perform audio<->text alignment.
     """
-    def __init__(self, device='cuda' if not torch.backends.mps.is_available() else 'mps'):
-        self.model = Wav2Vec2ForCTC.from_pretrained("jbetker/wav2vec2-large-robust-ft-libritts-voxpopuli").cpu()
-        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(f"facebook/wav2vec2-large-960h")
-        self.tokenizer = Wav2Vec2CTCTokenizer.from_pretrained('jbetker/tacotron-symbols')
+    def __init__(self, device='cuda' if not torch.backends.mps.is_available() else 'mps', cache=None):
+        self.model = Wav2Vec2ForCTC.from_pretrained("jbetker/wav2vec2-large-robust-ft-libritts-voxpopuli", cache_dir=cache).cpu()
+        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(f"facebook/wav2vec2-large-960h", cache_dir=cache)
+        self.tokenizer = Wav2Vec2CTCTokenizer.from_pretrained('jbetker/tacotron-symbols', cache_dir=cache)
         self.device = device
 
     def align(self, audio, expected_text, audio_sample_rate=24000):

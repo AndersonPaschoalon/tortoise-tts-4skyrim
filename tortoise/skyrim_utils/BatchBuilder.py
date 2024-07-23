@@ -5,7 +5,7 @@ import traceback
 import pandas as pd
 from io import StringIO
 from datetime import datetime
-from tortoise.skyrim_utils.CustomExceptions import *
+from skyrim_utils.CustomExceptions import *
 
 # == states of the column completed ==
 # already completed
@@ -24,8 +24,9 @@ class BatchBuilder:
     dialogueExport*.txt files, and create a batch file to be consumed by tortoisetts framework.
     TODO: create pre-batch where i can change the emotions manually
     """
-    CACHE_DIR = "cache"
-    RESULTS_DIR = "results"
+    CACHE_FOLDER = "cache"
+    RESULTS_FOLDER = "results"
+    MODELS_FOLDER = "models"
     IMPORT_FILE = os.path.join("import", "import.csv")
     BATCH_FILE = os.path.join("batch", "batch.csv")
     VALID_EMOTIONS = ['neutral', 'anger', 'happy', 'disgust', 'puzzled', 'sad', 'fear', 'hurt', 'surprise', 'sing',
@@ -73,11 +74,19 @@ class BatchBuilder:
 
     @staticmethod
     def get_batch_file_path():
-        return os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.BATCH_FILE)
+        return os.path.join(BatchBuilder.CACHE_FOLDER, BatchBuilder.BATCH_FILE)
 
     @staticmethod
     def get_import_file_path():
-        return os.path.join(BatchBuilder.CACHE_DIR, BatchBuilder.IMPORT_FILE)
+        return os.path.join(BatchBuilder.CACHE_FOLDER, BatchBuilder.IMPORT_FILE)
+
+    @staticmethod
+    def get_models_dir():
+        return os.path.join(BatchBuilder.CACHE_FOLDER, BatchBuilder.MODELS_FOLDER)
+
+    @staticmethod
+    def get_log_dir():
+        return os.path.join(BatchBuilder.RESULTS_FOLDER, "logs")
 
     @staticmethod
     def import_dialogs(skyrim_root):
@@ -114,7 +123,7 @@ class BatchBuilder:
                 return
             now = datetime.now()
             timestamp = now.strftime("%Y-%m-%d-%H-%M-%S")
-            new_filename = os.path.join(BatchBuilder.CACHE_DIR, f"{BatchBuilder.BATCH_FILE}-{timestamp}.csv")
+            new_filename = os.path.join(BatchBuilder.CACHE_FOLDER, f"{BatchBuilder.BATCH_FILE}-{timestamp}.csv")
             os.rename(batchfile, new_filename)
             print(f"Renamed '{batchfile}' to '{new_filename}'")
             print(f"To restore batch, rename {new_filename} to {BatchBuilder.BATCH_FILE} manually.")
@@ -132,7 +141,7 @@ class BatchBuilder:
                 return
             now = datetime.now()
             timestamp = now.strftime("%Y-%m-%d-%H-%M-%S")
-            new_filename = os.path.join(BatchBuilder.CACHE_DIR, f"{BatchBuilder.IMPORT_FILE}-{timestamp}.csv")
+            new_filename = os.path.join(BatchBuilder.CACHE_FOLDER, f"{BatchBuilder.IMPORT_FILE}-{timestamp}.csv")
             os.rename(importfile, new_filename)
             print(f"Renamed '{importfile}' to '{new_filename}'")
             print(f"To restore batch, rename {new_filename} to {BatchBuilder.IMPORT_FILE} manually.")
@@ -262,8 +271,8 @@ class BatchBuilder:
     @staticmethod
     def _initialize():
         # Create the output directory if it doesn't exist
-        os.makedirs(BatchBuilder.CACHE_DIR, exist_ok=True)
-        os.makedirs(BatchBuilder.RESULTS_DIR, exist_ok=True)
+        os.makedirs(BatchBuilder.CACHE_FOLDER, exist_ok=True)
+        os.makedirs(BatchBuilder.RESULTS_FOLDER, exist_ok=True)
 
     @staticmethod
     def _create_batch_from_dataframe(df, check_voice_samples=True):
@@ -314,7 +323,7 @@ class BatchBuilder:
 
             mod_text = BatchBuilder._modify_text_with_emotion(text, emotion, intensity)
             batch_line = [str(i), quest_id, STATE_COMPLETED_FALSE, voice_type + emotion, emotion, mod_text,
-                          os.path.join(BatchBuilder.RESULTS_DIR, filepath)]
+                          os.path.join(BatchBuilder.RESULTS_FOLDER, filepath)]
             batch_data.append(batch_line)
 
         # Create batch.csv with headers

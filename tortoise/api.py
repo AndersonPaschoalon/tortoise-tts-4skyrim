@@ -26,7 +26,7 @@ from contextlib import contextmanager
 from huggingface_hub import hf_hub_download
 pbar = None
 
-# DEFAULT_MODELS_DIR = os.path.join(os.path.expanduser('~'), '.cache', 'tortoise', 'models')
+DEFAULT_MODELS_DIR = os.path.join(os.path.expanduser('~'), '.cache', 'tortoise', 'models')
 DEFAULT_MODELS_DIR = os.path.join('cache', 'models')
 MODELS_DIR = os.environ.get('TORTOISE_MODELS_DIR', DEFAULT_MODELS_DIR)
 MODELS = {
@@ -197,13 +197,15 @@ class TextToSpeech:
         self.enable_redaction = enable_redaction
         if device is None:
             self.device = torch.device('cuda' if torch.cuda.is_available() else'cpu')
+            print("Using cuda device.")
         else:
             self.device = torch.device(device)
+            print("Using cpu device.")
             
         if torch.backends.mps.is_available():
             self.device = torch.device('mps')
         if self.enable_redaction:
-            self.aligner = Wav2VecAlignment()
+            self.aligner = Wav2VecAlignment(cache=models_dir)
 
         self.tokenizer = VoiceBpeTokenizer(
             vocab_file=tokenizer_vocab_file,

@@ -1,0 +1,27 @@
+actor_voice_type, actor_emotion, actor_emotion_intensity, actor_text, filepath
+
+actor_emotion
+Neutral
+Anger
+Happy
+Disgust
+Puzzled
+Sad
+Fear
+Hurt
+
+actor_emotion_intensity
+Normal < 60
+High   > 60
+
+----
+# Anger, Sad, ?Happy, ?Disgust, ?Fear
+* 'top_p': 0.999
+* 5 samples
+
+# Neutral, Puzzled,
+* valores default
+
+Neutral, Anger, Happy, Disgust, Puzzled, Sad, Fear
+
+actor_emotion_intensity is a integer from 0 to 100.
