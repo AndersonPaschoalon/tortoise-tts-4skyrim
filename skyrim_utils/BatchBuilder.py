@@ -7,6 +7,7 @@ from io import StringIO
 from datetime import datetime
 from skyrim_utils.CustomExceptions import *
 
+
 # == states of the column completed ==
 # already completed
 STATE_COMPLETED_TRUE = "true"
@@ -22,7 +23,6 @@ class BatchBuilder:
     """
     The purpose if this class is to import from Skyrim root directory all dialogs exported by Creation Kit as
     dialogueExport*.txt files, and create a batch file to be consumed by tortoisetts framework.
-    TODO: create pre-batch where i can change the emotions manually
     """
     CACHE_FOLDER = "cache"
     RESULTS_FOLDER = "results"

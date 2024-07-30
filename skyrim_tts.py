@@ -1,33 +1,30 @@
 import os
 import argparse
-import torch
 import torchaudio
 from pathlib import Path
 import traceback
 import sys
 
-from api import TextToSpeech, MODELS_DIR
-from tortoise.skyrim_utils.Utils import create_empty_audio
-from utils.audio import load_voices
+from tortoise.api import TextToSpeech
+from tortoise.utils.audio import load_voices
+
+from skyrim_utils.Utils import create_empty_audio
 from skyrim_utils.Logger import LoggingStream
 from skyrim_utils.BatchBuilder import BatchBuilder
-from skyrim_utils.BatchBuilder import STATE_COMPLETED_FALSE
 from skyrim_utils.BatchBuilder import STATE_COMPLETED_TRUE
-from skyrim_utils.BatchBuilder import STATE_COMPLETED_ONGOING
-from skyrim_utils.BatchBuilder import STATE_COMPLETED_ERROR
-from skyrim_utils.Settings import TortoiseApiSettings, TortoiseModelPresets, TtsSettings
+from skyrim_utils.BatchBuilder import STATE_COMPLETED_ONGOING, STATE_COMPLETED_ERROR
+from skyrim_utils.Settings import TtsSettings
 
 VERSION = "1.0.0"
 RET_ERROR = 1
 RET_SUCCESS = 0
-SETTINGS = {
-    "use_deepspeed": True,
-    "kv_cache": True,
-    "half": True,
-}
+LOG_FILE_NAME = "tortoise-tts-4skyrim.log"
 
-#
+
 def main():
+    # set working directory as script directory
+    setup_working_dir()
+
     parser = argparse.ArgumentParser(description='tortoise4skyrim: A tool for generating Skyrim character dialogues using Tortoise TTS.')
 
     parser.add_argument('--archive-import', '-c', action='store_true', help='Archive active import, if any')
@@ -59,6 +56,11 @@ def main():
         sys.exit(ret)
 
 
+def setup_working_dir():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(script_dir)
+
+
 def archive_import():
     BatchBuilder.archive_import()
 
@@ -88,7 +90,7 @@ def batch_generate():
     else:
         print("Batch file already created.")
 
-    LoggingStream.initialize(log_dir=BatchBuilder.get_log_dir(), log_file="tortoise-tts-4skyrim.log")
+    LoggingStream.initialize(log_dir=BatchBuilder.get_log_dir(), log_file=LOG_FILE_NAME)
 
     # batch is already active, start batch loop.
     print("Starting batch audio generation...")
@@ -135,11 +137,11 @@ def tortoise_do_tts(entry, bypass=False):
 
         model_dir = BatchBuilder.get_models_dir()
         settings = TtsSettings.get_settings(entry)
+        print(f"settings:{settings}")
         preset = settings['model']
         api = settings['api']
-        tts = settings['tts']
-        candidates = tts['candidates']
-        engine = tts['engine']
+        candidates = settings['candidates']
+        engine = settings['engine']
 
         output_dir = remove_filename_from_path(entry["output_path"])
         output_file_name, _ = os.path.splitext(os.path.basename(entry["output_path"]))
@@ -147,7 +149,7 @@ def tortoise_do_tts(entry, bypass=False):
         os.makedirs(output_dir, exist_ok=True)
 
         # I may add more tools for tts later...
-        if engine == TtsSettings.SYNTH_ENGINE_EMPTY:
+        if engine == TtsSettings.SYNTH_ENGINE_WAVE_EMPTY_AUDIO:
             # empty audio
             create_empty_audio(filename=os.path.join(output_dir, f'{output_file_name}.wav'), duration=2)
         else:
@@ -155,8 +157,9 @@ def tortoise_do_tts(entry, bypass=False):
             tts = TextToSpeech(models_dir=model_dir, use_deepspeed=api['use_deepspeed'], kv_cache=api['kv_cache'],
                                half=api['half'])
 
-            # voice_samples, conditioning_latents = load_voices(entry['voice'])
-            voice_samples, conditioning_latents = load_voices("malenordneutral")
+
+            # voice_samples, conditioning_latents = load_voices(['malenordneutral'])
+            voice_samples, conditioning_latents = load_voices([entry['voice']])
 
             gen, dbg_state = tts.tts_with_preset(entry['text'], k=candidates, voice_samples=voice_samples,
                                                  conditioning_latents=conditioning_latents,
@@ -168,7 +171,7 @@ def tortoise_do_tts(entry, bypass=False):
                                                  diffusion_temperature=preset['diffusion_temperature'])
             if isinstance(gen, list):
                 for j, g in enumerate(gen):
-                    pre_ext = "" if j == 0 else f"_{j}"
+                    pre_ext = "" if j == 0 else f"({j})"
                     torchaudio.save(os.path.join(output_dir, f'{output_file_name}{pre_ext}.wav'), g.squeeze(0).cpu(), 24000)
             else:
                 torchaudio.save(os.path.join(output_dir, f'{output_file_name}.wav'), gen.squeeze(0).cpu(), 24000)
@@ -176,9 +179,16 @@ def tortoise_do_tts(entry, bypass=False):
         return STATE_COMPLETED_TRUE
 
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
+        traceback_content = traceback.format_exc()
+        LoggingStream.error(f"Error Message: {e}")
+        LoggingStream.error(f"Stack Trace: {traceback_content}")
         return STATE_COMPLETED_ERROR
+
+def setup_home():
+    # set .. dir as home
+    home_dir = os.path.join(os.path.abspath(__file__), "")
+    os.chdir(home_dir)
+
 
 
 if __name__ == '__main__':

@@ -1,41 +1,48 @@
-from tortoise.skyrim_utils.Utils import check_package
+from skyrim_utils.Utils import check_package
+
 
 class TtsSettings:
 
     SYNTH_ENGINE_TORTOISE = 'tortoise'
-    SYNTH_ENGINE_EMPTY = 'empty'
+    SYNTH_ENGINE_WAVE_EMPTY_AUDIO = 'wave-empty-audio'
 
     @staticmethod
     def get_settings(entry):
+        """
+        Returns the settings for the audio synthesis.
+        engine: the tools is going to be used for TTS
+        candidates: number of samples will be generated.
+        api: cosutom settings for the tool wich will be used.
+        model: custom settings for the model will be used.
+        """
+        # model params
         emotion = entry.get('emotion', 'neutral')
         model_settings = TortoiseModelPresets.get_preset(emotion)
-        api_settings = TortoiseApiSettings.get_default()
-        text = str(entry.get('text', ''))
 
-        # engine
+        # API settings
+        api_settings = TortoiseApiSettings.get_default()
+
+        # engine selection
+        text = str(entry.get('text', ''))
         if text.strip() == '':
-            engine = TtsSettings.SYNTH_ENGINE_EMPTY
+            engine = TtsSettings.SYNTH_ENGINE_WAVE_EMPTY_AUDIO
         else:
             engine = TtsSettings.SYNTH_ENGINE_TORTOISE
 
         if emotion in ['neutral']:
-            candidates = 2
-        elif emotion in ['puzzled',  'surprise', 'frustrated', 'curious', 'confident']:
             candidates = 3
-        elif emotion in ['disgust', 'sad', 'fear', 'amused', 'happy']:
+        elif emotion in ['puzzled',  'surprise', 'frustrated', 'curious', 'confident']:
             candidates = 4
+        elif emotion in ['disgust', 'sad', 'fear', 'amused', 'happy']:
+            candidates = 5
         elif emotion in ['anger', 'hurt', 'sing']:
             candidates = 5
 
-        tts_settings = {
-            'engine': engine,
-            'candidates': candidates
-        }
-
         return {
-            'model': model_settings,
+            'engine': engine,
+            'candidates': candidates,
             'api': api_settings,
-            'tts': tts_settings
+            'model': model_settings,
         }
 
 
@@ -274,7 +281,7 @@ class TortoiseApiSettings:
             "produce_debug_state": False,
             "seed": None,
             "cvvp_amount": 0,
-            'preset': 'slow',
+            'preset': 'high_quality',
         }
 
         return default

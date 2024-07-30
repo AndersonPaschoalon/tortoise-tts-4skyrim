@@ -1,3 +1,8 @@
+
+
+
+==============================
+
 actor_voice_type, actor_emotion, actor_emotion_intensity, actor_text, filepath
 
 actor_emotion
@@ -25,3 +30,4 @@ High   > 60
 Neutral, Anger, Happy, Disgust, Puzzled, Sad, Fear
 
 actor_emotion_intensity is a integer from 0 to 100.
+

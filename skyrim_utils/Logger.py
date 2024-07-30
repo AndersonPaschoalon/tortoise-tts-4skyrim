@@ -1,13 +1,15 @@
 import logging
 import sys
 import os
+from datetime import datetime
+
 
 class LoggingStream:
-
     _is_initialize = False
     _stdout_bkp = None
     _stderr_bkp = None
     _logger = None
+    _log_file_path = None
 
     def __init__(self, logger, log_level):
         self.logger = logger
@@ -28,7 +30,7 @@ class LoggingStream:
         """
         if log_dir.strip() != "":
             os.makedirs(log_dir, exist_ok=True)
-        log_file_path = os.path.join(log_dir, log_file)
+        LoggingStream._log_file_path = os.path.join(log_dir, log_file)
 
         print(f"Using log_file {log_file}")
         if not LoggingStream._is_initialize:
@@ -37,7 +39,7 @@ class LoggingStream:
                 level=logging.DEBUG,
                 format='%(asctime)s [%(levelname)s] %(message)s',
                 handlers=[
-                    logging.FileHandler(log_file_path),
+                    logging.FileHandler(LoggingStream._log_file_path),
                     logging.StreamHandler(sys.stdout)
                 ]
             )
@@ -50,7 +52,7 @@ class LoggingStream:
             sys.stdout = LoggingStream(LoggingStream._logger, logging.INFO)
 
             # Redirect stderr to logging as warnings
-            sys.stderr = LoggingStream(LoggingStream._logger, logging.ERROR)
+            sys.stderr = LoggingStream(LoggingStream._logger, logging.WARNING)
 
             LoggingStream._is_initialize = True
 
@@ -62,6 +64,16 @@ class LoggingStream:
         sys.stdout = LoggingStream._stdout_bkp
         sys.stderr = LoggingStream._stderr_bkp
         LoggingStream._is_initialize = False
+        if LoggingStream._log_file_path:
+            # Create a timestamp for the new log file name
+            timestamp = datetime.now().strftime('%Y.%m.%d.%H.%M.%S')
+            log_dir, log_file = os.path.split(LoggingStream._log_file_path)
+            log_file_name, log_file_ext = os.path.splitext(log_file)
+            new_log_file_name = f"{log_file_name}.{timestamp}{log_file_ext}"
+            new_log_file_path = os.path.join(log_dir, new_log_file_name)
+
+            # Rename the log file
+            os.rename(LoggingStream._log_file_path, new_log_file_path)
 
     @staticmethod
     def debug(message):
@@ -88,26 +100,25 @@ class LoggingStream:
         if LoggingStream._logger:
             LoggingStream._logger.critical(message)
 
-"""
-# Example usage
-LoggingStream.initialize()
 
-print("This is an info message.")
-LoggingStream.debug("This is a debug message.")
-LoggingStream.info("This is an info message.")
-LoggingStream.warning("This is a warning message.")
-LoggingStream.error("This is an error message.")
-LoggingStream.critical("This is a critical message.")
+def test_logger():
+    # Example usage
+    LoggingStream.initialize()
 
-try:
-    raise ValueError("This is an error message raised as an exception.")
-except ValueError as e:
-    LoggingStream.error(f"Exception caught: {e}")
+    print("This is an info message.")
+    LoggingStream.debug("This is a debug message.")
+    LoggingStream.info("This is an info message.")
+    LoggingStream.warning("This is a warning message.")
+    LoggingStream.error("This is an error message.")
+    LoggingStream.critical("This is a critical message.")
 
-LoggingStream.finalize()
+    try:
+        raise ValueError("This is an error message raised as an exception.")
+    except ValueError as e:
+        LoggingStream.error(f"Exception caught: {e}")
 
-print("This is a regular print message.")
+    LoggingStream.finalize()
 
-"""
+    print("This is a regular print message.")
 
 

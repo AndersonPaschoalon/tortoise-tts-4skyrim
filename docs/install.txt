@@ -1,0 +1,11 @@
+* Install dependencies
+* install deepspeed
+* install bitsandbytes (https://huggingface.co/docs/bitsandbytes/main/en/index)
+    ```
+    pip install bitsandbytes
+    ```
+* install accelerate
+    conda install -c conda-forge accelerate (https://huggingface.co/docs/accelerate/basic_tutorials/install)
+
+* triton
+    https://github.com/PrashantSaikia/Triton-for-Windows

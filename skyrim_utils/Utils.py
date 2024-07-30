@@ -1,6 +1,7 @@
 import wave
 import numpy as np
 
+TORTOISE_4SKYRIM_HOME = ""
 
 def check_package(package_name):
     """

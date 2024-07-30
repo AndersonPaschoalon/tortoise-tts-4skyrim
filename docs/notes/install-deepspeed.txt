@@ -1,0 +1,17 @@
+cd /D I:\Anaconda\tortoise-tts-02
+nvcc --version
+dir
+cd ..
+cd Workspace
+ls
+cd DeepSpeed
+ls
+build_win.bat
+cl
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
+build_win.bat
+git-url.bat
+cl
+pip install dist/deepspeed-0.14.5+879c6cd0-cp39-cp39-win_amd64.whl
+history
+doskey /history
